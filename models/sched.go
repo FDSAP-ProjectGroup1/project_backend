@@ -1,9 +1,13 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+)
 
 type Scheds struct {
-	ID     uint    `gorm:"primary key;autoIncrement" json:"id"`
+	ID     uint    `gorm:"SERIAL PRIMARY KEY" json:"id"`
+	Date   *string `json:"date"`
+	Time   *string `json:"time"`
 	Title  *string `json:"title"`
 	Reason *string `json:"reason"`
 }

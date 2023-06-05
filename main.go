@@ -18,12 +18,14 @@ import (
 )
 
 type User struct {
-	Name     string `json:"name"`
-	UserName string `json:"username"`
+	Fullname string `json:"fullname"`
+	Name     string `json:"email"`
 	Password string `json:"password"`
 	Address  string `json:"address"`
 }
 type Sched struct {
+	Date   string `json:"date"`
+	Time   string `json:"time"`
 	Title  string `json:"title"`
 	Reason string `json:"reason"`
 }
@@ -99,7 +101,7 @@ func (r *Repository) CreateUser(context *fiber.Ctx) error {
 	}
 
 	// Validate user input
-	if user.Name == "" || user.UserName == "" || user.Password == "" || user.Address == "" {
+	if user.Name == "" || user.Fullname == "" || user.Password == "" || user.Address == "" {
 		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
 			"message": "Missing required fields",
 		})
@@ -109,7 +111,7 @@ func (r *Repository) CreateUser(context *fiber.Ctx) error {
 	// Create the user record
 	userModel := models.Users{
 		Name:     &user.Name,
-		UserName: &user.UserName,
+		Fullname: &user.Fullname,
 		Password: &user.Password,
 		Address:  &user.Address,
 	}
@@ -148,6 +150,8 @@ func (r *Repository) CreateSched(context *fiber.Ctx) error {
 
 	// Create the sched record
 	schedModel := models.Scheds{
+		Date:   &sched.Date,
+		Time:   &sched.Time,
 		Title:  &sched.Title,
 		Reason: &sched.Reason,
 	}
@@ -324,8 +328,14 @@ func (r *Repository) UpdateUser(context *fiber.Ctx) error {
 	if updatedUser.Name != "" {
 		userModel.Name = &updatedUser.Name
 	}
+	if updatedUser.Fullname != "" {
+		userModel.Fullname = &updatedUser.Fullname
+	}
 	if updatedUser.Password != "" {
 		userModel.Password = &updatedUser.Password
+	}
+	if updatedUser.Address != "" {
+		userModel.Address = &updatedUser.Address
 	}
 
 	err = r.DB.Save(&userModel).Error
@@ -367,8 +377,11 @@ func (r *Repository) UpdateSched(context *fiber.Ctx) error {
 	}
 
 	// Update the sched fields
-	if updatedSched.Title != "" {
-		schedModel.Title = &updatedSched.Title
+	if updatedSched.Date != "" {
+		schedModel.Date = &updatedSched.Date
+	}
+	if updatedSched.Time != "" {
+		schedModel.Time = &updatedSched.Time
 	}
 	if updatedSched.Reason != "" {
 		schedModel.Reason = &updatedSched.Reason
@@ -390,16 +403,16 @@ func (r *Repository) UpdateSched(context *fiber.Ctx) error {
 
 func (r *Repository) SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
-	api.Post("/create_users", r.CreateUser)
-	api.Delete("/delete_user/:id", r.DeleteUser)
-	api.Get("/get_users/:id", r.GetUserByID)
-	api.Get("/users", r.GetUsers)
-	api.Put("/update_user/:id", r.UpdateUser)
+	api.Post("/user", r.CreateUser)
+	api.Delete("/delete/:id", r.DeleteUser)
+	api.Get("/search/:id", r.GetUserByID)
+	api.Get("/all_users", r.GetUsers)
+	api.Put("/update/:id", r.UpdateUser)
 
-	api.Post("/create_scheds", r.CreateSched)
-	api.Delete("/delete_sched/:id", r.DeleteSched)
-	api.Get("/get_sched/:id", r.GetSchedByID)
-	api.Get("/scheds", r.GetScheds)
+	api.Post("/sched", r.CreateSched)
+	api.Delete("/drop_sched/:id", r.DeleteSched)
+	api.Get("/search_sched/:id", r.GetSchedByID)
+	api.Get("/all_scheds", r.GetScheds)
 	api.Put("/update_sched/:id", r.UpdateSched)
 	api.Post("/login", r.Login)
 }
