@@ -7,8 +7,6 @@ import (
 	"os"
 
 	"crypto/subtle"
-	"encoding/base64"
-	"strings"
 
 	"github.com/RustyPunzalan/project/models"
 	"github.com/RustyPunzalan/project/storage"
@@ -19,7 +17,7 @@ import (
 
 type User struct {
 	Fullname string `json:"fullname"`
-	Name     string `json:"email"`
+	Name     string `json:"username"`
 	Password string `json:"password"`
 	Address  string `json:"address"`
 }
@@ -35,49 +33,41 @@ type Repository struct {
 }
 
 // Login handles user authentication using Basic Auth
+// Login handles user authentication using the request body
 func (r *Repository) Login(context *fiber.Ctx) error {
-	auth := context.Get("Authorization")
-	if !strings.HasPrefix(auth, "Basic ") {
-		context.Status(http.StatusUnauthorized).JSON(&fiber.Map{
-			"message": "Authorization header missing or invalid",
-		})
-		return nil
-	}
+	user := User{}
 
-	payload, err := base64.StdEncoding.DecodeString(auth[6:])
+	err := context.BodyParser(&user)
 	if err != nil {
-		context.Status(http.StatusUnauthorized).JSON(&fiber.Map{
-			"message": "Invalid authorization payload",
+		context.Status(http.StatusUnprocessableEntity).JSON(&fiber.Map{
+			"message": "Invalid request payload",
+		})
+		return err
+	}
+
+	// Validate user input
+	if user.Name == "" || user.Password == "" {
+		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
+			"message": "Missing username or password",
 		})
 		return nil
 	}
-
-	credentials := strings.SplitN(string(payload), ":", 2)
-	if len(credentials) != 2 {
-		context.Status(http.StatusUnauthorized).JSON(&fiber.Map{
-			"message": "Invalid username or password",
-		})
-		return nil
-	}
-
-	username := credentials[0]
-	password := credentials[1]
 
 	// Query the database to retrieve the user record
 	userModel := &models.Users{}
-	err = r.DB.Where("name = ?", username).First(userModel).Error
+	err = r.DB.Where("name = ?", user.Name).First(userModel).Error
 	if err != nil {
 		context.Status(http.StatusUnauthorized).JSON(&fiber.Map{
-			"message": "Invalid username or password",
+			"message": "Invalid username",
 		})
 		return nil
 	}
 
 	// Compare the provided password with the stored password
 	storedPassword := []byte(*userModel.Password)
-	if subtle.ConstantTimeCompare([]byte(password), storedPassword) != 1 {
+	if subtle.ConstantTimeCompare([]byte(user.Password), storedPassword) != 1 {
 		context.Status(http.StatusUnauthorized).JSON(&fiber.Map{
-			"message": "Invalid username or password",
+			"message": "Invalid or password",
 		})
 		return nil
 	}
@@ -233,6 +223,7 @@ func (r *Repository) GetUsers(context *fiber.Ctx) error {
 	})
 	return nil
 }
+
 func (r *Repository) GetScheds(context *fiber.Ctx) error {
 	schedModels := &[]models.Scheds{}
 
@@ -325,11 +316,11 @@ func (r *Repository) UpdateUser(context *fiber.Ctx) error {
 	}
 
 	// Update the user fields
-	if updatedUser.Name != "" {
-		userModel.Name = &updatedUser.Name
-	}
 	if updatedUser.Fullname != "" {
 		userModel.Fullname = &updatedUser.Fullname
+	}
+	if updatedUser.Name != "" {
+		userModel.Name = &updatedUser.Name
 	}
 	if updatedUser.Password != "" {
 		userModel.Password = &updatedUser.Password
@@ -400,6 +391,24 @@ func (r *Repository) UpdateSched(context *fiber.Ctx) error {
 	})
 	return nil
 }
+func (r *Repository) SearchUsers(context *fiber.Ctx) error {
+	query := context.Params("query")
+
+	userModels := &[]models.Users{}
+	err := r.DB.Where("fullname LIKE ? OR address LIKE ?", "%"+query+"%", "%"+query+"%").Find(userModels).Error
+	if err != nil {
+		context.Status(http.StatusBadRequest).JSON(&fiber.Map{
+			"message": "could not search users",
+		})
+		return err
+	}
+
+	context.Status(http.StatusOK).JSON(&fiber.Map{
+		"message": "users fetched successfully",
+		"data":    userModels,
+	})
+	return nil
+}
 
 func (r *Repository) SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
@@ -408,6 +417,7 @@ func (r *Repository) SetupRoutes(app *fiber.App) {
 	api.Get("/search/:id", r.GetUserByID)
 	api.Get("/all_users", r.GetUsers)
 	api.Put("/update/:id", r.UpdateUser)
+	api.Get("/search_users/:query", r.SearchUsers)
 
 	api.Post("/sched", r.CreateSched)
 	api.Delete("/drop_sched/:id", r.DeleteSched)
@@ -435,6 +445,10 @@ func main() {
 		log.Fatal("could not load the database")
 	}
 	err = models.MigrateUsers(db)
+	if err != nil {
+		log.Fatal("could not migrate db")
+	}
+	err = models.MigrateScheds(db)
 	if err != nil {
 		log.Fatal("could not migrate db")
 	}
