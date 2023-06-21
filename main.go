@@ -15,6 +15,11 @@ import (
 	"gorm.io/gorm"
 )
 
+// Define your chatbot struct
+type Chatbot struct {
+	DB *gorm.DB
+}
+
 type User struct {
 	Fullname string `json:"fullname"`
 	Name     string `json:"username"`
@@ -28,6 +33,13 @@ type Sched struct {
 	Reason string `json:"reason"`
 }
 
+type Message struct {
+	Text string `json:"message"`
+}
+
+type Response struct {
+	Text string `json:"response"`
+}
 type Repository struct {
 	DB *gorm.DB
 }
@@ -410,6 +422,66 @@ func (r *Repository) SearchUsers(context *fiber.Ctx) error {
 	return nil
 }
 
+// HandleChat handles chat interactions with the bot
+func (r *Repository) HandleChat(context *fiber.Ctx) error {
+	// Parse the chat message from the request body
+	message := Message{}
+	err := context.BodyParser(&message)
+	if err != nil {
+		context.Status(http.StatusUnprocessableEntity).JSON(&fiber.Map{
+			"message": "Invalid request payload",
+		})
+		return err
+	}
+
+	// Process the chat message and generate a response
+	response := r.GenerateResponse(message.Text)
+
+	// Return the response as JSON
+	context.Status(http.StatusOK).JSON(&Response{
+		Text: response,
+	})
+	return nil
+}
+
+// GenerateResponse generates a response based on the input text
+func (r *Repository) GenerateResponse(input string) string {
+	// Add your chatbot logic here to generate a response based on the input
+	// For example, you can use a switch statement to handle different input cases
+
+	switch input {
+	case "hello", "Hello":
+		return "Hello, how can I assist you?"
+
+	case "hi", "Hi":
+		return "Welcome! Thank you for choosing our chatbot assistance. \n We are here to help you with any questions, concerns, or information you may need. Feel free to ask us anything, and we'll provide you with the best possible support. Our goal is to make your experience smooth, efficient, and enjoyable. So, go ahead and let us know how we can assist you today!"
+
+		//Tagalog
+
+	case "Kamusta", "kamusta", "Kamusta?", "kamusta?", "Musta", "musta", "Musta?", "musta?":
+		return "Kamusta! Ako ang iyong chatbot na handang tumulong sa iyo. Ano ang mga katanungan o tulong na kailangan mo? Sabihin mo lang sa akin at tutulungan kita sa abot ng aking makakaya."
+
+	case "Patulong", "patulong", "Tulong", "tulong", "Patulong po", "patulong po", "tulong po", "Tulong po":
+		return "Para makagawa ng appointment, mangyaring ibigay sa app ang mga sumusunod na detalye:\n\n1.	Petsa ng appointment na nais mo.\n2.	Oras ng appointment na nais mo.\n3.	Anumang espesyal na kahilingan o detalye na kailangan kong malaman.\n\n Ipadala lamang ang mga detalye na ito sa aming app at aasikasuhin nito ang iyong appointment. Salamat!"
+
+	case "Paano mag gawa ng appointment?", "paano mag gawa ng appointment?", "pano mag gawa ng appointment?", "Pano mag gawa ng appointment?", "Pano mag gawa ng appointment", "pano mag gawa ng appointment", "Paano mag gawa ng appointment", "paano mag gawa ng appointment":
+		return "Tiyak! Ano ang mga katanungan o tulong na kailangan mo? Ipadala lang sa akin ang iyong mga katanungan o mga detalye ng anumang problema, at gagawin ko ang aking makakaya upang tulungan ka."
+
+		//English
+
+	case "help", "Help":
+		return "Sure, I can help you with that!"
+
+	case "How can I make an appointment?", "How can i make an appointment?", "how can I make an appointment?", "how can i make an appointment?":
+		return "Greetings! Our chatbot is here to assist you. If you'd like to make an appointment, simply provide us with the date, time, and any specific requirements. We'll take care of the rest and confirm the appointment. Feel free to ask any questions or provide further details. We're here to make your experience smooth and convenient."
+
+	case "Goodbye", "goodbye":
+		return "Thank you for chatting with me! I hope I was able to assist you effectively and provide the information you were seeking. Remember, knowledge is a journey, and I'm here to accompany you along the way. If you have any more questions in the future, don't hesitate to reach out. Wishing you continued success, fulfillment, and an abundance of learning experiences. Goodbye for now, and take care!"
+
+	default:
+		return "I'm sorry, I didn't understand that. Can you please rephrase?"
+	}
+}
 func (r *Repository) SetupRoutes(app *fiber.App) {
 	api := app.Group("/api")
 	api.Post("/user", r.CreateUser)
@@ -425,6 +497,7 @@ func (r *Repository) SetupRoutes(app *fiber.App) {
 	api.Get("/all_scheds", r.GetScheds)
 	api.Put("/update_sched/:id", r.UpdateSched)
 	api.Post("/login", r.Login)
+	api.Post("/chat", r.HandleChat)
 }
 
 func main() {
