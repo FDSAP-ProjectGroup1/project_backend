@@ -475,6 +475,9 @@ func (r *Repository) GenerateResponse(input string) string {
 	case "How can I make an appointment?", "How can i make an appointment?", "how can I make an appointment?", "how can i make an appointment?":
 		return "Greetings! Our chatbot is here to assist you. If you'd like to make an appointment, simply provide us with the date, time, and any specific requirements. We'll take care of the rest and confirm the appointment. Feel free to ask any questions or provide further details. We're here to make your experience smooth and convenient."
 
+	case "Steps on how to make an appointment", "steps on how to make an appointment", "Steps on how to make an Appointment", "steps on how to make an Appointment":
+		return " Absolutely! We're here to assist you. Please follow these steps:\n\n1.	Choose a preferred date and time.\n2.	Specify any specific requirements.\n3.	Submit your appointment for approval.\n\nWe're ready to help you through the entire process. Feel free to ask any questions along the way!"
+
 	case "Goodbye", "goodbye":
 		return "Thank you for chatting with me! I hope I was able to assist you effectively and provide the information you were seeking. Remember, knowledge is a journey, and I'm here to accompany you along the way. If you have any more questions in the future, don't hesitate to reach out. Wishing you continued success, fulfillment, and an abundance of learning experiences. Goodbye for now, and take care!"
 
